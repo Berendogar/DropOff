@@ -4,56 +4,36 @@
 **Repository:** https://github.com/Berendogar/DropOff
 **Hosted URL:** https://dropoff-beren-dogar.onrender.com
 
-I ran the starter on my machine and walked sign-in, the file list, upload, and download before changing the code.
-
-## How it fits together
-
 ```text
-Browser
-  login, upload, list, download
-        |
-        v
-FastAPI  +  Jinja pages  +  static/style.css
-        |
-        +-- SQLite  data/dropoff.db     users, and which file belongs to whom
-        +-- disk    data/uploads/       the actual bytes
-                    data/private/       not a student drop
+Browser -> FastAPI + Jinja
+              |
+              +-- SQLite data/dropoff.db    who owns which file
+              +-- data/uploads/             the bytes
+              +-- data/private/             not a student file
 ```
 
-The signed-in user id sits in the session cookie. The home page does not scan the folder. It selects `files` rows for that user id only.
+The session cookie holds the user id. The home page lists that user's rows only. It does not scan the folder.
 
-After the first request, `data/` has three things the app created itself:
+After the first request, `data/` has `dropoff.db`, `uploads/lab1-maya.txt`, and `private/grader.txt`. Maya sees her lab. Devon sees an empty list, even though Maya's file is on disk. `grader.txt` never gets a row.
 
-- `dropoff.db` — maya, devon, and one file row for maya
-- `uploads/lab1-maya.txt` — Maya's sample lab
-- `private/grader.txt` — a TA note. It is not a submission and it never gets a row in `files`
+An upload used to land at `data/uploads/<original name>`, and that same name was saved on the row. Download was `GET /download?name=...`. The handler joined `name` onto the uploads folder and did not check the session.
 
-So Maya's home page shows her lab, and Devon's is empty, even though `lab1-maya.txt` is sitting in the folder. A file that is only on disk does not show up in the list.
+## Bug
 
-Where an upload used to land: the original filename, straight under `data/uploads/`. `lab2.txt` became `data/uploads/lab2.txt`, and that same string was saved on the row.
+`..` leaves the uploads folder. Nobody has to be signed in.
 
-How a download became a path: the link was `/download?name=<stored name>`. The handler joined that string onto the uploads folder and returned the file. It did not look at the session, and it did not check that the path stayed inside `uploads/`.
+`GET /download?name=../private/grader.txt` returned the TA note. `name=lab1-maya.txt` returned Maya's lab with no cookie.
 
-## The bug
+Upload did the same join. Signed in as devon, a file named `../private/planted.txt` was written under `data/private/`.
 
-`os.path.join` will follow `..`. Nobody has to be signed in.
+## Patch
 
-```text
-GET /download?name=../private/grader.txt
-```
+Download is `/download/<id>` and requires a session. The lookup uses the id and the current user, so Devon cannot open Maya's row. The path is refused if it is outside `data/uploads`.
 
-That came back 200 with the TA note from `data/private/grader.txt`. The same request with `name=lab1-maya.txt` downloads Maya's lab with no cookie.
+New files go to `data/uploads/<user id>/<random name>`. The original name stays in SQLite and is the name the browser saves. A name that contains `/` or `\` is rejected.
 
-Upload does the same join. Signed in as devon, I posted a file whose name was `../private/planted.txt`. It was written to `data/private/planted.txt`, not under `uploads/`.
+Maya's sample still downloads. Its stored name, `lab1-maya.txt`, is already inside `uploads/`.
 
-## What I changed
+`pytest -q`: 6 passed.
 
-Download is now `/download/<id>`, and you have to be signed in. The lookup is `id` and `user_id` together, so guessing Maya's id as Devon does not return her file. The stored path is resolved and refused if it is not inside `data/uploads`.
-
-New uploads go to `data/uploads/<user id>/<random name>`. The original filename stays in SQLite and is the name the browser gets back, so a normal download is still `lab2.txt`. A filename that contains `/` or `\` is rejected and nothing is written.
-
-Maya's old sample still downloads. Its stored name is `lab1-maya.txt`, which is already inside `uploads/`.
-
-`pytest -q` — 6 passed. That covers `/health`, a signed-out download, the old `../private/grader.txt` URL, another user's id, a normal upload that keeps the original name, and an upload named with `..`.
-
-Hosted at https://dropoff-beren-dogar.onrender.com. The free instance sleeps when nobody is using it, and the disk does not stick around, so a cold start builds `data/` again (demo users, Maya's sample, the private TA note). Demo accounts are unchanged: `maya` / `devon`, password `campus123`.
+The free Render instance sleeps when idle and drops the database. A cold start creates the demo accounts and Maya's sample again. `maya` / `devon`, password `campus123`.
