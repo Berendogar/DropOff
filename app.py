@@ -2,6 +2,7 @@ import hashlib
 import os
 import sqlite3
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -94,6 +95,17 @@ def current_user(request: Request):
         return conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
 
 
+def upload_path(stored_name: str) -> Path | None:
+    """Resolve a stored name without allowing it to leave the upload folder."""
+    uploads_root = UPLOADS.resolve()
+    path = (UPLOADS / stored_name).resolve()
+    try:
+        path.relative_to(uploads_root)
+    except ValueError:
+        return None
+    return path
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     user = current_user(request)
@@ -137,8 +149,13 @@ async def upload(request: Request, file: UploadFile = File(...)):
     if not user:
         return RedirectResponse("/login", status_code=303)
     original = file.filename or "upload.bin"
-    stored = original
-    dest = UPLOADS / stored
+    if "/" in original or "\\" in original or original in {".", ".."}:
+        return HTMLResponse("Use a filename without folders.", status_code=400)
+
+    stored = f"{user['id']}/{uuid4().hex}"
+    dest = upload_path(stored)
+    if dest is None:
+        return HTMLResponse("Invalid upload path.", status_code=400)
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(await file.read())
     with db() as conn:
@@ -149,12 +166,25 @@ async def upload(request: Request, file: UploadFile = File(...)):
     return RedirectResponse("/", status_code=303)
 
 
-@app.get("/download")
-def download(name: str):
-    path = os.path.join(str(UPLOADS), name)
-    if not os.path.isfile(path):
+@app.get("/download/{file_id}")
+def download(request: Request, file_id: int):
+    user = current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+
+    with db() as conn:
+        file_row = conn.execute(
+            "SELECT * FROM files WHERE id = ? AND user_id = ?",
+            (file_id, user["id"]),
+        ).fetchone()
+
+    if not file_row:
         return HTMLResponse("That file is not in the drop.", status_code=404)
-    return FileResponse(path, filename=os.path.basename(name))
+
+    path = upload_path(file_row["stored_name"])
+    if path is None or not path.is_file():
+        return HTMLResponse("That file is not in the drop.", status_code=404)
+    return FileResponse(path, filename=file_row["original_name"])
 
 
 @app.get("/health")

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: dropoff-beren-dogar
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATA_DIR
+        value: /app/data

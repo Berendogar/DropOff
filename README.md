@@ -1,5 +1,8 @@
 # DropOff
 
+Case Study 7, Beren Dogar. The architecture, the bug, and the patch are in
+[SUBMISSION.md](SUBMISSION.md).
+
 Lab submission drop for one section. Students upload a file, keep the original name, and download what they already turned in.
 
 FastAPI, Jinja templates, SQLite, and a folder on disk.
@@ -31,6 +34,12 @@ docker compose up --build
 ```
 
 The app listens on port 3000.
+
+## Hosting
+
+`render.yaml` is the free Render service. That plan sleeps after it sits idle, and it
+does not keep the SQLite file. The next start creates the demo accounts and Maya's
+sample lab again.
 
 ## Demo accounts
 

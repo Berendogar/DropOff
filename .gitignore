@@ -1,8 +1,11 @@
 data/*.db
 data/uploads/*
 !data/uploads/.gitkeep
+data/private/*
+!data/private/.gitkeep
 __pycache__/
 *.pyc
 .env
 .venv/
 .DS_Store
+*.zip

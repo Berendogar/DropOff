@@ -14,7 +14,7 @@
   <ul class="list">
     {% for f in files %}
       <li>
-        <a href="/download?name={{ f.stored_name }}">{{ f.original_name }}</a>
+        <a href="/download/{{ f.id }}">{{ f.original_name }}</a>
         <span>{{ f.uploaded_at }}</span>
       </li>
     {% else %}
