@@ -3,7 +3,7 @@ services:
     name: dropoff-beren-dogar
     runtime: docker
     plan: free
-    region: frankfurt
+    region: oregon
     healthCheckPath: /health
     envVars:
       - key: SECRET_KEY

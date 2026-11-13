@@ -2,6 +2,7 @@
 
 **Student:** Beren Dogar
 **Repository:** https://github.com/Berendogar/DropOff
+**Hosted URL:** https://dropoff-beren-dogar.onrender.com
 
 I ran the starter on my machine and walked sign-in, the file list, upload, and download before changing the code.
 
@@ -55,4 +56,4 @@ Maya's old sample still downloads. Its stored name is `lab1-maya.txt`, which is 
 
 `pytest -q` — 6 passed. That covers `/health`, a signed-out download, the old `../private/grader.txt` URL, another user's id, a normal upload that keeps the original name, and an upload named with `..`.
 
-`render.yaml` targets a free Render service named `dropoff-beren-dogar`. That plan sleeps when nobody is using it, and the disk does not stick around, so a cold start builds `data/` again (demo users, Maya's sample, the private TA note). Demo accounts are unchanged: `maya` / `devon`, password `campus123`.
+Hosted at https://dropoff-beren-dogar.onrender.com. The free instance sleeps when nobody is using it, and the disk does not stick around, so a cold start builds `data/` again (demo users, Maya's sample, the private TA note). Demo accounts are unchanged: `maya` / `devon`, password `campus123`.
